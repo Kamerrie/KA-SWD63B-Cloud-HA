@@ -3,6 +3,7 @@ using KA_SWD63B_Cloud_HA.Models;
 using Microsoft.CodeAnalysis;
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace KA_SWD63B_Cloud_HA.DataAccess
 {
@@ -12,17 +13,25 @@ namespace KA_SWD63B_Cloud_HA.DataAccess
         public FirestoreVideosRepository(string project)
         {
             db = FirestoreDb.Create(project);
-            Console.WriteLine("Created Cloud Firestore client with project ID: {0}", project);
         }
 
-        public List<Video> GetVideos()
+        public async Task<List<Video>> GetVideos()
         {
-
+            List<Video> videos = new List<Video>();
+            Query allVideosQuery = db.Collection("videos");
+            QuerySnapshot allVideosQuerySnapshot = await allVideosQuery.GetSnapshotAsync();
+            foreach (DocumentSnapshot documentSnapshot in allVideosQuerySnapshot.Documents)
+            {
+                Video v = documentSnapshot.ConvertTo<Video>();
+                videos.Add(v);
+                
+            }
+            return videos;
         }
 
-        public void AddVideo(Video v)
+        public async void AddVideo(Video v)
         {
-
+            await db.Collection("videos").Document().SetAsync(v);
         }
     }
 }
