@@ -1,4 +1,6 @@
 ﻿using KA_SWD63B_Cloud_HA.Models;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using System;
@@ -23,6 +25,12 @@ namespace KA_SWD63B_Cloud_HA.Controllers
             return View();
         }
 
+        [Authorize]
+        public IActionResult MembersHome()
+        {
+            return View();
+        }
+
         public IActionResult Privacy()
         {
             return View();
@@ -32,6 +40,12 @@ namespace KA_SWD63B_Cloud_HA.Controllers
         public IActionResult Error()
         {
             return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+        }
+
+        public async Task<IActionResult> SignOut()
+        {
+            await HttpContext.SignOutAsync();
+            return RedirectToAction("Index");
         }
     }
 }
