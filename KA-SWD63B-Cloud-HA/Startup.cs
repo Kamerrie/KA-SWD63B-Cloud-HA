@@ -1,3 +1,4 @@
+using KA_SWD63B_Cloud_HA.DataAccess;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Builder;
@@ -10,6 +11,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using static Google.Rpc.Context.AttributeContext.Types;
 
 namespace KA_SWD63B_Cloud_HA
 {
@@ -18,6 +20,9 @@ namespace KA_SWD63B_Cloud_HA
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
+
+            string credential_path = @"C:\Users\KatherineAttard\source\repos\KA-SWD63B-Cloud-HA\KA-SWD63B-Cloud-HA\peak-segment-380707-d3d4aea2cdb9.json";
+            System.Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", credential_path);
         }
 
         public IConfiguration Configuration { get; }
@@ -41,6 +46,9 @@ namespace KA_SWD63B_Cloud_HA
                     options.ClientId = Configuration["Authentication:Google:ClientId"];
                     options.ClientSecret = Configuration["Authentication:Google:ClientSecret"];
                 });
+
+            string projectId = Configuration["projectid"].ToString();
+            services.AddScoped<FirestoreVideosRepository>(provider => new FirestoreVideosRepository(projectId));
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
