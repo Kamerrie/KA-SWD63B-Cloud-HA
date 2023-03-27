@@ -49,6 +49,7 @@ namespace KA_SWD63B_Cloud_HA
 
             string projectId = Configuration["projectid"].ToString();
             services.AddScoped<FirestoreVideosRepository>(provider => new FirestoreVideosRepository(projectId));
+            services.AddScoped<UserAccountsRepository>(provider => new UserAccountsRepository(projectId));
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
