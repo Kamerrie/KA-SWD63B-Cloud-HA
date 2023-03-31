@@ -1,9 +1,11 @@
 ﻿using Google.Cloud.Firestore;
 using KA_SWD63B_Cloud_HA.Models;
+using Microsoft.AspNetCore.Http;
 using Microsoft.CodeAnalysis;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
 
 namespace KA_SWD63B_Cloud_HA.DataAccess
@@ -11,9 +13,11 @@ namespace KA_SWD63B_Cloud_HA.DataAccess
     public class FirestoreVideosRepository
     {
         FirestoreDb db;
-        public FirestoreVideosRepository(string project)
+        private readonly IHttpContextAccessor _httpContextAccessor;
+        public FirestoreVideosRepository(string project, IHttpContextAccessor httpContextAccessor)
         {
             db = FirestoreDb.Create(project);
+            _httpContextAccessor = httpContextAccessor;
         }
 
         public async Task<List<Video>> GetVideos()
@@ -62,11 +66,22 @@ namespace KA_SWD63B_Cloud_HA.DataAccess
         }
 
         //for use later down the line
-        //public async Task<Video> GetAccountVideos(string accountId)
-        //{
-        //
-        //}
+        public async Task<List<Video>> GetAccountVideos()
+        {
+            string userEmail = _httpContextAccessor.HttpContext.User.FindFirst(ClaimTypes.Email)?.Value;
 
+            List<Video> videos = new List<Video>();
+            Query allVideosQuery = db.Collection("videos").WhereEqualTo("email", userEmail);
+            QuerySnapshot videoQuerySnapshot = await allVideosQuery.GetSnapshotAsync();
+            foreach (DocumentSnapshot documentSnapshot in videoQuerySnapshot.Documents)
+            {
+                Video v = documentSnapshot.ConvertTo<Video>();
+                videos.Add(v);
+            }
+            return videos;
+        }
+
+        /*
         public async void Delete (string title) {
             Query videosQuery = db.Collection("videos").WhereEqualTo("title", title);
             QuerySnapshot videosQuerySnapshot = await videosQuery.GetSnapshotAsync();
@@ -81,10 +96,16 @@ namespace KA_SWD63B_Cloud_HA.DataAccess
                 await videoRef.DeleteAsync();
             }
         }
+        */
+        public async void Delete (string Id)
+        {
+            DocumentReference videoRef = db.Collection("videos").Document(Id);
+            await videoRef.DeleteAsync(); 
+        }
 
         public async void AddVideo(Video v)
         {
-            await db.Collection("videos").Document().SetAsync(v);
+            await db.Collection("videos").Document(v.Id).SetAsync(v);
         }
     }
 }
