@@ -36,9 +36,10 @@ namespace KA_SWD63B_Cloud_HA.DataAccess
 
         public async void Update (Video v)
         {
-            Query videosQuery = db.Collection("videos").WhereEqualTo("title", v.title);
-            QuerySnapshot videosQuerySnapshot = await videosQuery.GetSnapshotAsync();
-            DocumentSnapshot documentSnapshot = videosQuerySnapshot.Documents.FirstOrDefault();
+            string userEmail = _httpContextAccessor.HttpContext.User.FindFirst(ClaimTypes.Email)?.Value;
+
+            DocumentReference docRef = db.Collection("videos").Document(v.Id);
+            DocumentSnapshot documentSnapshot = await docRef.GetSnapshotAsync();
             if (documentSnapshot.Exists != true)
             {
                 throw new Exception("Book does not exist!");
@@ -46,22 +47,23 @@ namespace KA_SWD63B_Cloud_HA.DataAccess
             else
             {
                 DocumentReference videoRef = db.Collection("videos").Document(documentSnapshot.Id);
+                v.dateUploaded = v.dateUploaded.ToUniversalTime();
+                v.email = userEmail;
                 await videoRef.SetAsync(v);
             }
         }
 
-        public async Task<Video> GetVideo(string title)
+        public async Task<Video> GetVideo(string Id)
         {
-            Query videosQuery = db.Collection("videos").WhereEqualTo("title", title);
-            QuerySnapshot videosQuerySnapshot = await videosQuery.GetSnapshotAsync();
-            DocumentSnapshot documentSnapshot = videosQuerySnapshot.Documents.FirstOrDefault();
-            if (documentSnapshot.Exists != true) {
-                return null;
+            DocumentReference docRef = db.Collection("videos").Document(Id);
+            DocumentSnapshot snapshot = await docRef.GetSnapshotAsync();
+            if (snapshot.Exists) {
+                Video v = snapshot.ConvertTo<Video>();
+                return v;
             }
             else
             {
-                Video v = documentSnapshot.ConvertTo<Video>();
-                return v;
+                return null;
             }
         }
 

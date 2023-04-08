@@ -19,6 +19,28 @@ namespace KA_SWD63B_Cloud_HA.Controllers
             var list = await _videosRepo.GetAccountVideos();
             return View(list);
         }
+
+        public async Task<IActionResult> Details(string Id)
+        {
+            var videoDetails = await _videosRepo.GetVideo(Id);
+            return View(videoDetails);
+        }
+        [HttpGet]
+        public async Task<IActionResult> Edit(string Id)
+        {
+            //_videosRepo.Update(v);
+            var videoDetails = await _videosRepo.GetVideo(Id);
+            return View(videoDetails);
+        }
+
+        [HttpPost]
+        public IActionResult Edit(Video v)
+        {
+            _videosRepo.Update(v);
+
+            return RedirectToAction("Index");
+        }
+
         [HttpGet]
         public IActionResult Create()
         {
