@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.HttpsPolicy;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -51,6 +52,10 @@ namespace KA_SWD63B_Cloud_HA
             string projectId = Configuration["projectid"].ToString();
             services.AddScoped<FirestoreVideosRepository>(provider => new FirestoreVideosRepository(projectId, provider.GetService<IHttpContextAccessor>()));
             services.AddScoped<UserAccountsRepository>(provider => new UserAccountsRepository(projectId));
+            services.Configure<FormOptions>(x =>
+            {
+                x.MultipartBodyLengthLimit = long.MaxValue;
+            });
             services.AddHttpContextAccessor();
         }
 

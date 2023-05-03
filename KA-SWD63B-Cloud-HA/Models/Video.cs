@@ -21,11 +21,15 @@ namespace KA_SWD63B_Cloud_HA.Models
         [Required]
         public string title { get; set; }
         [FirestoreProperty]
+        public string VideoUrl { get; set; }
+
+        [FirestoreProperty]
         [Required]
         public System.DateTime dateUploaded { get; set; } = System.DateTime.UtcNow;
         [FirestoreProperty]
         //[Required]
         //[EmailAddress]
         public string email { get; set; }// = HttpContextAccessor.HttpContext.User.FindFirst(ClaimTypes.Email)?.Value;
+        public string ThumbnailUrl { get; internal set; }
     }
 }

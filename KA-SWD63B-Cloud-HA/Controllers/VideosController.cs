@@ -1,5 +1,6 @@
 ﻿using KA_SWD63B_Cloud_HA.DataAccess;
 using KA_SWD63B_Cloud_HA.Models;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Security.Claims;
@@ -47,7 +48,7 @@ namespace KA_SWD63B_Cloud_HA.Controllers
             return View();
         }
         [HttpPost]
-        public IActionResult Create(Video v)
+        public IActionResult Create(Video v, IFormFile videoFile)
         {
             
             // Retrieve the authenticated user's email
@@ -55,13 +56,16 @@ namespace KA_SWD63B_Cloud_HA.Controllers
 
             // Set the email property of the video object to the user's email
             v.email = email;
+            v.title = videoFile.FileName;
             
-            if (ModelState.IsValid)
+            if (//ModelState.IsValid &&
+                videoFile != null && videoFile.Length > 0)
             {
                 try
                 {
-                    _videosRepo.AddVideo(v);
+                    _videosRepo.AddVideo(v, videoFile);
                     TempData["success"] = "Video was added successfully in database";
+                    return RedirectToAction(nameof(Index));
                 }
                 catch (Exception ex)
                 {
@@ -70,7 +74,8 @@ namespace KA_SWD63B_Cloud_HA.Controllers
             }
             else
             {
-
+                TempData["error"] = "Please select a file to upload.";
+                return View();
             }
             return View();
         }
