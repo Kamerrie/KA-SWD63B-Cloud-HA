@@ -2,14 +2,16 @@
 using Google.Cloud.Storage.V1;
 using KA_SWD63B_Cloud_HA.Models;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.CodeAnalysis;
+using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Pipes;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
-using Xabe.FFmpeg;
 
 namespace KA_SWD63B_Cloud_HA.DataAccess
 {
@@ -110,46 +112,69 @@ namespace KA_SWD63B_Cloud_HA.DataAccess
             await videoRef.DeleteAsync(); 
         }
 
-        public async Task AddVideo(Video v, IFormFile videoFile)
+        public async Task<string> GetVideoFileName(string Id)
         {
-            var bucketName = "cloud_programming_ha";
-            var videoFileName = $"{v.Id}-{videoFile.FileName}";
-            var thumbnailFileName = $"{v.Id}-thumbnail.jpg";
-
-            using (var memoryStream = new MemoryStream())
+            DocumentReference docRef = db.Collection("videos").Document(Id);
+            DocumentSnapshot snapshot = await docRef.GetSnapshotAsync();
+            if (snapshot.Exists)
             {
-                await videoFile.CopyToAsync(memoryStream);
-                memoryStream.Seek(0, SeekOrigin.Begin);
-                var ffmpeg = FFmpeg.Conversions.New();
-                // Generate thumbnail from the video
-                using (var ffmpeg = new Engine(@"C:\ffmpeg\ffmpeg.exe"))
-                {
-                    var inputFile = @"C:\path\to\input\video.mp4";
-                    var outputFile = @"C:\path\to\output\image.jpg";
-                    var frameNo = 10; // the frame number you want to extract
-
-                    var conversion = ffmpeg.Conversions.New()
-                        .ExtractNthFrame(frameNo, fileName => outputFile);
-
-                    var result = await conversion.Start();
-                }
-
-                var thumbnail = ffmpeg.ExtractNthFrame(memoryStream, TimeSpan.FromSeconds(1));
-
-                // Upload video to Google Cloud Storage
-                var videoStorageObject = await _storageClient.UploadObjectAsync(
-                    bucketName, videoFileName, videoFile.ContentType, memoryStream);
-
-                // Upload thumbnail to Google Cloud Storage
-                var thumbnailStorageObject = await _storageClient.UploadObjectAsync(
-                    bucketName, thumbnailFileName, "image/jpeg", thumbnail);
-
-                v.VideoUrl = $"https://storage.googleapis.com/{bucketName}/{videoFileName}";
-                v.ThumbnailUrl = $"https://storage.googleapis.com/{bucketName}/{thumbnailFileName}";
-
-                await db.Collection("videos").Document(v.Id).SetAsync(v);
+                Video v = snapshot.ConvertTo<Video>();
+                return v.VideoUrl;
+            }
+            else
+            {
+                return null;
             }
         }
+
+        public async Task AddVideo(Video v, IFormFile videoFile, IFormFile thumbnailFile)
+        {
+            var bucketName = "cloud_programming_ha";
+            var vFileName = $"{v.Id}-video-{videoFile.FileName}";
+            var tFileName = $"{v.Id}-thumbnail-{thumbnailFile.FileName}";
+
+            if (videoFile != null && thumbnailFile != null)
+            {
+                var storage = StorageClient.Create();
+
+
+                using var videoMemoryStream = videoFile.OpenReadStream();
+                using var thumbnailMemoryStream = thumbnailFile.OpenReadStream();
+
+                storage.UploadObject(bucketName, vFileName, null, videoMemoryStream);
+                storage.UploadObject(bucketName, tFileName, null, thumbnailMemoryStream);
+
+                var storageVideoObject = storage.GetObject(bucketName, vFileName);
+                var storageThumbnailObject = storage.GetObject(bucketName, tFileName);
+
+
+                //await videoFile.CopyToAsync(videoMemoryStream);
+                //videoMemoryStream.Seek(0, SeekOrigin.Begin);
+
+                //var vStorageObject = await _storageClient.UploadObjectAsync(bucketName, vFileName, videoFile.ContentType, videoMemoryStream);
+                v.VideoUrl = $"https://storage.googleapis.com/{bucketName}/{vFileName}";
+
+                //await thumbnailFile.CopyToAsync(thumbnailMemoryStream);
+                //thumbnailMemoryStream.Seek(0, SeekOrigin.Begin);
+                
+                //var tStorageObject = await _storageClient.UploadObjectAsync(bucketName, tFileName, thumbnailFile.ContentType, thumbnailMemoryStream);
+                v.ThumbnailUrl = $"https://storage.googleapis.com/{bucketName}/{tFileName}";
+            }
+            else
+            {
+                throw new ArgumentException("Both videoFile and thumbnailFile must be non-null");
+            }
+
+            await db.Collection("videos").Document(v.Id).SetAsync(v);
+        }
+
+        public async Task AddDownloadHistoryAsync(string videoId, DownloadHistory downloadHistory)
+        {
+            var videoRef = db.Collection("videos").Document(videoId);
+            var downloadHistoryRef = videoRef.Collection("downloadHistory").Document(downloadHistory.Id);
+            await downloadHistoryRef.SetAsync(downloadHistory);
+        }
+
 
     }
 }

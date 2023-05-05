@@ -1,8 +1,10 @@
-﻿using KA_SWD63B_Cloud_HA.DataAccess;
+﻿using Google.Cloud.Storage.V1;
+using KA_SWD63B_Cloud_HA.DataAccess;
 using KA_SWD63B_Cloud_HA.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System;
+using System.IO;
 using System.Security.Claims;
 using System.Threading.Tasks;
 
@@ -47,8 +49,38 @@ namespace KA_SWD63B_Cloud_HA.Controllers
         {
             return View();
         }
+
         [HttpPost]
-        public IActionResult Create(Video v, IFormFile videoFile)
+        public async Task<IActionResult> UploadVideo(IFormFile videoFile, IFormFile thumbnailFile)
+        {
+            var v = new Video();
+            // Retrieve the authenticated user's email
+            var email = User.FindFirst(ClaimTypes.Email)?.Value;
+
+            // Set the email property of the video object to the user's email
+            v.email = email;
+            v.title = videoFile.FileName;
+
+            if (videoFile != null && videoFile.Length > 0 && thumbnailFile != null && thumbnailFile.Length > 0)
+            {
+                try
+                {
+                    await _videosRepo.AddVideo(v, videoFile, thumbnailFile);
+                    return Json(new { success = true });
+                }
+                catch (Exception ex)
+                {
+                    return Json(new { success = false });
+                }
+            }
+            else
+            {
+                return Json(new { success = false });
+            }
+        }
+        /*
+        [HttpPost]
+        public IActionResult Create(Video v, IFormFile videoFile, IFormFile thumbnailFile)
         {
             
             // Retrieve the authenticated user's email
@@ -59,11 +91,11 @@ namespace KA_SWD63B_Cloud_HA.Controllers
             v.title = videoFile.FileName;
             
             if (//ModelState.IsValid &&
-                videoFile != null && videoFile.Length > 0)
+                videoFile != null && videoFile.Length > 0 && thumbnailFile != null && thumbnailFile.Length > 0)
             {
                 try
                 {
-                    _videosRepo.AddVideo(v, videoFile);
+                    _videosRepo.AddVideo(v, videoFile, thumbnailFile);
                     TempData["success"] = "Video was added successfully in database";
                     return RedirectToAction(nameof(Index));
                 }
@@ -79,7 +111,61 @@ namespace KA_SWD63B_Cloud_HA.Controllers
             }
             return View();
         }
+        */
 
+        [HttpGet]
+        public async Task<IActionResult> DownloadVideo(string Id)
+        {
+            string videoUrl = await _videosRepo.GetVideoFileName(Id);
+
+            var email = User.FindFirst(ClaimTypes.Email)?.Value;
+            var dh = new DownloadHistory();
+            dh.UserEmail = email;
+            await _videosRepo.AddDownloadHistoryAsync(Id, dh);
+
+
+            if (string.IsNullOrEmpty(videoUrl))
+            {
+                return NotFound();
+            }
+
+            string bucketName = "cloud_programming_ha";
+            string videoFileName = videoUrl.Substring(videoUrl.LastIndexOf('/') + 1);
+
+            var storage = StorageClient.Create();
+            var stream = new MemoryStream();
+            storage.DownloadObject(bucketName, videoFileName, stream);
+            stream.Seek(0, SeekOrigin.Begin);
+
+            string contentType = "application/octet-stream";
+            string fileExtension = Path.GetExtension(videoFileName);
+
+            if (!string.IsNullOrEmpty(fileExtension))
+            {
+                contentType = GetContentType(fileExtension);
+            }
+
+            return new FileStreamResult(stream, contentType)
+            {
+                FileDownloadName = videoFileName
+            };
+        }
+
+        private string GetContentType(string fileExtension)
+        {
+            switch (fileExtension.ToLower())
+            {
+                case ".mp4":
+                    return "video/mp4";
+                case ".webm":
+                    return "video/webm";
+                default:
+                    return "application/octet-stream";
+            }
+        }
+
+
+        [HttpPost]
         public IActionResult Delete(string Id)
         {
             

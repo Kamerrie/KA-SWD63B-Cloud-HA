@@ -57,6 +57,14 @@ namespace KA_SWD63B_Cloud_HA
                 x.MultipartBodyLengthLimit = long.MaxValue;
             });
             services.AddHttpContextAccessor();
+            services.Configure<FormOptions>(options =>
+            {
+                options.MultipartBodyLengthLimit = long.MaxValue;
+                options.ValueLengthLimit = int.MaxValue;
+                options.MemoryBufferThreshold = int.MaxValue;
+            });
+
+
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

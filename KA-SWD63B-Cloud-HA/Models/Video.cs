@@ -6,6 +6,7 @@ using Google.Type;
 using Microsoft.AspNetCore.Http;
 using Microsoft.VisualBasic;
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 
@@ -30,6 +31,8 @@ namespace KA_SWD63B_Cloud_HA.Models
         //[Required]
         //[EmailAddress]
         public string email { get; set; }// = HttpContextAccessor.HttpContext.User.FindFirst(ClaimTypes.Email)?.Value;
-        public string ThumbnailUrl { get; internal set; }
+        [FirestoreProperty]
+        public string ThumbnailUrl { get; set; }
+        public List<DownloadHistory> DownloadHistory { get; set; } = new List<DownloadHistory>();
     }
 }
