@@ -16,7 +16,7 @@ RUN dotnet publish -c Release -o out
 # Build the runtime image
 FROM mcr.microsoft.com/dotnet/core/aspnet:3.1
 WORKDIR /app
-COPY --from=build /app/out .
+COPY --from=build /app/out ./
 
 # Expose the port and start the app
 ENV ASPNETCORE_URLS=http://*:${PORT}
