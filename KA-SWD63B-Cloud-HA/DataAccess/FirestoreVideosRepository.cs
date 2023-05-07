@@ -1,5 +1,7 @@
 ﻿using Google.Cloud.Firestore;
+using Google.Cloud.PubSub.V1;
 using Google.Cloud.Storage.V1;
+using Google.Protobuf;
 using KA_SWD63B_Cloud_HA.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -174,6 +176,20 @@ namespace KA_SWD63B_Cloud_HA.DataAccess
             var downloadHistoryRef = videoRef.Collection("downloadHistory").Document(downloadHistory.Id);
             await downloadHistoryRef.SetAsync(downloadHistory);
         }
+
+        public async Task PublishMessageToPubSub(string messageText)
+        {
+            PublisherServiceApiClient publisher = PublisherServiceApiClient.Create();
+            TopicName topicName = new TopicName("peak-segment-380707", "cloud-ha-pubsub");
+
+            PubsubMessage message = new PubsubMessage
+            {
+                Data = ByteString.CopyFromUtf8(messageText)
+            };
+
+            await publisher.PublishAsync(topicName, new[] { message });
+        }
+
 
 
     }

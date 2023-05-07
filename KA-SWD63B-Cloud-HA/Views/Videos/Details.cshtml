@@ -43,6 +43,7 @@
     <br />
 
     <a href="@Url.Action("DownloadVideo", "Videos", new { Id = Model.Id })" class="btn btn-primary">Download Video</a>
+    <a href="@Url.Action("PublishMessage", "Videos", new { videoUrl = Model.VideoUrl })" class="btn btn-primary">Transcribe Video</a>
 
 </div>
 <div>

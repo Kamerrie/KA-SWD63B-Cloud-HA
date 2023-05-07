@@ -1,6 +1,7 @@
 ﻿using Google.Cloud.Storage.V1;
 using KA_SWD63B_Cloud_HA.DataAccess;
 using KA_SWD63B_Cloud_HA.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System;
@@ -10,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace KA_SWD63B_Cloud_HA.Controllers
 {
-    
+    [Authorize]
     public class VideosController : Controller
     {
         FirestoreVideosRepository _videosRepo;
@@ -118,16 +119,17 @@ namespace KA_SWD63B_Cloud_HA.Controllers
         {
             string videoUrl = await _videosRepo.GetVideoFileName(Id);
 
-            var email = User.FindFirst(ClaimTypes.Email)?.Value;
-            var dh = new DownloadHistory();
-            dh.UserEmail = email;
-            await _videosRepo.AddDownloadHistoryAsync(Id, dh);
-
 
             if (string.IsNullOrEmpty(videoUrl))
             {
                 return NotFound();
             }
+
+            //Download history updated
+            var email = User.FindFirst(ClaimTypes.Email)?.Value;
+            var dh = new DownloadHistory();
+            dh.UserEmail = email;
+            await _videosRepo.AddDownloadHistoryAsync(Id, dh);
 
             string bucketName = "cloud_programming_ha";
             string videoFileName = videoUrl.Substring(videoUrl.LastIndexOf('/') + 1);
@@ -180,5 +182,21 @@ namespace KA_SWD63B_Cloud_HA.Controllers
             }
             return RedirectToAction("Index");
         }
+
+        public async Task<IActionResult> PublishMessage(string videoUrl)
+        {
+            if (!string.IsNullOrEmpty(videoUrl))
+            {
+                await _videosRepo.PublishMessageToPubSub(videoUrl);
+                TempData["success"] = "Message published to Pub/Sub successfully.";
+            }
+            else
+            {
+                TempData["error"] = "Video URL is missing.";
+            }
+
+            return RedirectToAction("Index");
+        }
+
     }
 }
